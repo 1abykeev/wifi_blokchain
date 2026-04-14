@@ -1,0 +1,94 @@
+[
+  {
+    "index": 0,
+    "timestamp": 1776199528.8701022,
+    "transactions": [
+      {
+        "type": "genesis",
+        "data": "WiFi Blockchain Genesis Block"
+      }
+    ],
+    "previous_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+    "nonce": 535,
+    "hash": "007cfcdcdefe81581787aacdfbbb019c03aff5a18afd0b0f0280efbe5550acb7"
+  },
+  {
+    "index": 1,
+    "timestamp": 1776199769.859884,
+    "transactions": [
+      {
+        "type": "device_connect",
+        "mac": "AA:BB:CC:DD:EE:01",
+        "metadata": {
+          "hostname": "laptop"
+        },
+        "timestamp": 1776199769.8598757
+      }
+    ],
+    "previous_hash": "007cfcdcdefe81581787aacdfbbb019c03aff5a18afd0b0f0280efbe5550acb7",
+    "nonce": 555,
+    "hash": "002bb969067ef0cd2b2327127470ca848ee5fc76ec4a43e31d65c5e6659f6998"
+  },
+  {
+    "index": 2,
+    "timestamp": 1776199769.9203672,
+    "transactions": [
+      {
+        "type": "device_connect",
+        "mac": "AA:BB:CC:DD:EE:02",
+        "metadata": {
+          "hostname": "phone"
+        },
+        "timestamp": 1776199769.9203563
+      }
+    ],
+    "previous_hash": "002bb969067ef0cd2b2327127470ca848ee5fc76ec4a43e31d65c5e6659f6998",
+    "nonce": 126,
+    "hash": "0074d40a6aa8efc0fbc5f556c813eef66ae43c506429a06501de5048cfd490be"
+  },
+  {
+    "index": 3,
+    "timestamp": 1776199769.9648528,
+    "transactions": [
+      {
+        "type": "message",
+        "sender": "AA:BB:CC:DD:EE:01",
+        "receiver": "AA:BB:CC:DD:EE:02",
+        "payload": "Hello!",
+        "metadata": {},
+        "timestamp": 1776199769.9648454
+      }
+    ],
+    "previous_hash": "0074d40a6aa8efc0fbc5f556c813eef66ae43c506429a06501de5048cfd490be",
+    "nonce": 4,
+    "hash": "00d9cad915fe460a2003b2bcdd0c5b8db8e8d915a809afd192589deecb5f995f"
+  },
+  {
+    "index": 4,
+    "timestamp": 1776199770.0087864,
+    "transactions": [
+      {
+        "type": "device_block",
+        "mac": "AA:BB:CC:DD:EE:01",
+        "timestamp": 1776199770.0087798
+      }
+    ],
+    "previous_hash": "00d9cad915fe460a2003b2bcdd0c5b8db8e8d915a809afd192589deecb5f995f",
+    "nonce": 140,
+    "hash": "00839fc6cfd6f63ecaedef11ef3cd560d047d6c18444df8d4993d9623a8dabe9"
+  },
+  {
+    "index": 5,
+    "timestamp": 1776199770.1026835,
+    "transactions": [
+      {
+        "type": "device_allow",
+        "mac": "AA:BB:CC:DD:EE:01",
+        "timestamp": 1776199770.1026773
+      }
+    ],
+    "previous_hash": "00839fc6cfd6f63ecaedef11ef3cd560d047d6c18444df8d4993d9623a8dabe9",
+    "nonce": 24,
+    "hash": "00ad074d6c49b5176402b637ed23e2b8d7007b96c36ed723532f1d852c94eb75"
+  }
+]

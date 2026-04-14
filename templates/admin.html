@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WiFi Blockchain — Admin</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <style>
+    body { background: #0f172a; color: #e2e8f0; font-family: 'Segoe UI', system-ui, sans-serif; }
+    .navbar { background: #1e293b !important; border-bottom: 1px solid #334155; }
+    .card { background: #1e293b; border: 1px solid #334155; color: #e2e8f0; }
+    .card-header { background: #0f172a; border-bottom: 1px solid #334155; font-weight: 600; }
+    .table { color: #e2e8f0; }
+    .table thead th { border-color: #334155; color: #94a3b8; font-size: .75rem; text-transform: uppercase; letter-spacing:.05em; }
+    .table td { border-color: #1e293b; vertical-align: middle; }
+    .table tbody tr:hover { background: #263044; }
+    .status-pill { font-size: .7rem; padding: 2px 8px; border-radius: 9999px; font-weight: 600; }
+    .pill-online  { background: #064e3b; color: #34d399; }
+    .pill-blocked { background: #7f1d1d; color: #f87171; }
+    #eventFeed { height: 340px; overflow-y: auto; font-size: .8rem; }
+    .event-item { padding: 6px 10px; border-left: 3px solid transparent; margin-bottom: 2px; border-radius: 2px; background: #0f172a; }
+    .event-connect    { border-color: #34d399; }
+    .event-disconnect { border-color: #f87171; }
+    .event-message    { border-color: #60a5fa; }
+    .event-block      { border-color: #fb923c; }
+    .event-allow      { border-color: #a78bfa; }
+    .event-mine       { border-color: #fbbf24; }
+    .event-time { color: #64748b; margin-right: 6px; }
+    .chain-block { background: #0f172a; border: 1px solid #334155; border-radius: 6px; margin-bottom: 8px; }
+    .chain-block-header { padding: 10px 14px; cursor: pointer; display: flex; align-items: center; gap: 10px; }
+    .chain-block-header:hover { background: #1a2740; border-radius: 6px; }
+    .block-hash { font-family: monospace; font-size: .72rem; color: #94a3b8; }
+    .block-body { padding: 12px 14px; border-top: 1px solid #1e293b; display: none; }
+    .block-body pre { background: #0d1526; color: #7dd3fc; border-radius: 4px; padding: 10px; font-size: .72rem; overflow-x: auto; margin: 0; }
+    .stat-card { background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 14px 18px; }
+    .stat-value { font-size: 1.6rem; font-weight: 700; }
+    .stat-label { font-size: .72rem; color: #94a3b8; text-transform: uppercase; letter-spacing:.05em; }
+    .valid-badge   { color: #34d399; }
+    .invalid-badge { color: #f87171; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+    .btn-sm { font-size: .72rem; padding: 2px 8px; }
+  </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar navbar-dark px-3 py-2">
+  <span class="navbar-brand fw-bold"><i class="bi bi-wifi me-2"></i>WiFi Blockchain Admin</span>
+  <div class="d-flex gap-3 align-items-center" style="font-size:.8rem;">
+    <span><i class="bi bi-box me-1 text-warning"></i>Blocks: <strong id="nbBlocks">—</strong></span>
+    <span><i class="bi bi-phone me-1 text-info"></i>Devices: <strong id="nbDevices">—</strong></span>
+    <span><i class="bi bi-clock me-1 text-secondary"></i>Uptime: <strong id="uptime">—</strong></span>
+    <span id="chainBadge"><i class="bi bi-shield-check me-1 text-success"></i><strong>VALID</strong></span>
+    <span class="badge bg-secondary" id="modeBadge">SIM</span>
+  </div>
+</nav>
+
+<div class="container-fluid py-3 px-3">
+
+  <!-- Stat cards -->
+  <div class="row g-2 mb-3">
+    <div class="col-6 col-md-3">
+      <div class="stat-card">
+        <div class="stat-value text-warning" id="statBlocks">0</div>
+        <div class="stat-label">Total Blocks</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="stat-card">
+        <div class="stat-value text-info" id="statDevices">0</div>
+        <div class="stat-label">Connected Devices</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="stat-card">
+        <div class="stat-value text-danger" id="statBlocked">0</div>
+        <div class="stat-label">Blocked Devices</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="stat-card">
+        <div class="stat-value" id="statUptime">0s</div>
+        <div class="stat-label">Uptime</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-3">
+    <!-- Connected Devices -->
+    <div class="col-lg-6">
+      <div class="card h-100">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span><i class="bi bi-people me-2"></i>Connected Devices</span>
+          <span class="badge bg-info" id="deviceCount">0</span>
+        </div>
+        <div class="card-body p-0">
+          <table class="table table-borderless mb-0" id="devicesTable">
+            <thead>
+              <tr>
+                <th>MAC / ID</th>
+                <th>Hostname</th>
+                <th>Connected</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="devicesBody">
+              <tr id="noDevicesRow">
+                <td colspan="5" class="text-center text-secondary py-4">
+                  <i class="bi bi-wifi-off me-2"></i>No devices connected
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live Event Feed -->
+    <div class="col-lg-6">
+      <div class="card h-100">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span><i class="bi bi-activity me-2"></i>Live Event Feed</span>
+          <button class="btn btn-sm btn-outline-secondary" onclick="clearFeed()">Clear</button>
+        </div>
+        <div class="card-body p-2">
+          <div id="eventFeed"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Blockchain Viewer -->
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span><i class="bi bi-link-45deg me-2"></i>Blockchain</span>
+          <div class="d-flex gap-2">
+            <button class="btn btn-sm btn-outline-warning" onclick="loadChain()">
+              <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+            </button>
+            <button class="btn btn-sm btn-outline-success" onclick="verifyChain()">
+              <i class="bi bi-shield-check me-1"></i>Verify Chain
+            </button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div id="verifyResult" class="mb-2" style="display:none"></div>
+          <div id="chainViewer">
+            <p class="text-secondary text-center py-3">Loading chain…</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/socket.io@4.6.1/client-dist/socket.io.min.js"></script>
+<script>
+  const socket = io();
+  let blockedSet = new Set();
+  let chainLength = 0;
+
+  // ── Helpers ──────────────────────────────────────────────────────
+  function fmt(ts) {
+    return new Date(ts * 1000).toLocaleTimeString();
+  }
+  function fmtUptime(s) {
+    if (s < 60) return s + 's';
+    if (s < 3600) return Math.floor(s/60) + 'm ' + (s%60) + 's';
+    return Math.floor(s/3600) + 'h ' + Math.floor((s%3600)/60) + 'm';
+  }
+  function shortHash(h) { return h ? h.slice(0,14) + '…' : ''; }
+
+  // ── Status bar ───────────────────────────────────────────────────
+  function updateStatusBar(data) {
+    const bl = data.chain_length ?? chainLength;
+    const dv = (data.devices ?? []).length;
+    const bk = (data.blocked ?? blockedSet.size);
+    const up = data.uptime_seconds ?? 0;
+
+    document.getElementById('nbBlocks').textContent  = bl;
+    document.getElementById('nbDevices').textContent = dv;
+    document.getElementById('uptime').textContent    = fmtUptime(up);
+    document.getElementById('statBlocks').textContent  = bl;
+    document.getElementById('statDevices').textContent = dv;
+    document.getElementById('statBlocked').textContent = typeof bk === 'number' ? bk : bk.length;
+    document.getElementById('statUptime').textContent  = fmtUptime(up);
+
+    const valid = data.chain_valid !== false;
+    const badge = document.getElementById('chainBadge');
+    badge.innerHTML = valid
+      ? '<i class="bi bi-shield-check me-1 text-success"></i><strong class="valid-badge">VALID</strong>'
+      : '<i class="bi bi-shield-x me-1 text-danger"></i><strong class="invalid-badge">INVALID</strong>';
+
+    if (data.simulation_mode !== undefined) {
+      document.getElementById('modeBadge').textContent = data.simulation_mode ? 'SIM' : 'LIVE';
+    }
+  }
+
+  // ── Device table ─────────────────────────────────────────────────
+  function renderDevices(devices, blocked) {
+    blockedSet = new Set(blocked);
+    const tbody = document.getElementById('devicesBody');
+    document.getElementById('deviceCount').textContent = devices.length;
+
+    if (devices.length === 0) {
+      tbody.innerHTML = `<tr id="noDevicesRow">
+        <td colspan="5" class="text-center text-secondary py-4">
+          <i class="bi bi-wifi-off me-2"></i>No devices connected
+        </td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = devices.map(d => {
+      const isBlocked = blockedSet.has(d.mac);
+      const pill = isBlocked
+        ? '<span class="status-pill pill-blocked">Blocked</span>'
+        : '<span class="status-pill pill-online">Online</span>';
+      const actionBtn = isBlocked
+        ? `<button class="btn btn-sm btn-outline-success" onclick="allowDevice('${d.mac}')"><i class="bi bi-check-circle me-1"></i>Allow</button>`
+        : `<button class="btn btn-sm btn-outline-danger"  onclick="blockDevice('${d.mac}')"><i class="bi bi-slash-circle me-1"></i>Block</button>`;
+      const hostname = d.hostname || d.ip || '—';
+      const connTime = d.connected_at ? fmt(d.connected_at) : '—';
+      return `<tr>
+        <td><code style="font-size:.75rem">${d.mac}</code></td>
+        <td>${hostname}</td>
+        <td style="font-size:.75rem;color:#94a3b8">${connTime}</td>
+        <td>${pill}</td>
+        <td>${actionBtn}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  // ── Event feed ───────────────────────────────────────────────────
+  const eventIcons = {
+    connect: ['event-connect','bi-box-arrow-in-right','Connected'],
+    disconnect: ['event-disconnect','bi-box-arrow-right','Disconnected'],
+    message: ['event-message','bi-chat-dots','Message'],
+    block: ['event-block','bi-slash-circle','Blocked'],
+    allow: ['event-allow','bi-check-circle','Allowed'],
+    mine: ['event-mine','bi-boxes','Block mined'],
+  };
+
+  function addEvent(type, text, time) {
+    const feed = document.getElementById('eventFeed');
+    const [cls, icon, label] = eventIcons[type] || ['','bi-info-circle', type];
+    const div = document.createElement('div');
+    div.className = `event-item ${cls}`;
+    div.innerHTML = `<span class="event-time">${time || new Date().toLocaleTimeString()}</span>`
+      + `<i class="bi ${icon} me-1"></i><strong>${label}</strong> ${text}`;
+    feed.prepend(div);
+    // Keep last 200 events
+    while (feed.children.length > 200) feed.removeChild(feed.lastChild);
+  }
+
+  function clearFeed() {
+    document.getElementById('eventFeed').innerHTML = '';
+  }
+
+  // ── Block / Allow ────────────────────────────────────────────────
+  function blockDevice(mac) {
+    fetch('/api/device/block', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({mac})
+    });
+  }
+
+  function allowDevice(mac) {
+    fetch('/api/device/allow', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({mac})
+    });
+  }
+
+  // ── Blockchain viewer ────────────────────────────────────────────
+  function loadChain() {
+    fetch('/api/blockchain')
+      .then(r => r.json())
+      .then(data => renderChain(data.chain));
+  }
+
+  function renderChain(chain) {
+    chainLength = chain.length;
+    const container = document.getElementById('chainViewer');
+    if (!chain.length) { container.innerHTML = '<p class="text-secondary text-center">Empty chain</p>'; return; }
+
+    container.innerHTML = [...chain].reverse().map(b => {
+      const txSummary = b.transactions.map(t => t.type).join(', ');
+      const colourClass = b.index === 0 ? 'text-warning' : 'text-info';
+      return `<div class="chain-block">
+        <div class="chain-block-header" onclick="toggleBlock(this)">
+          <span class="badge bg-secondary">#${b.index}</span>
+          <span class="${colourClass} fw-semibold" style="font-size:.8rem">${txSummary}</span>
+          <span class="block-hash ms-auto">${shortHash(b.hash)}</span>
+          <i class="bi bi-chevron-down ms-2" style="font-size:.7rem;color:#64748b"></i>
+        </div>
+        <div class="block-body">
+          <pre>${JSON.stringify(b, null, 2)}</pre>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function toggleBlock(header) {
+    const body = header.nextElementSibling;
+    const icon = header.querySelector('.bi-chevron-down, .bi-chevron-up');
+    if (body.style.display === 'none' || body.style.display === '') {
+      body.style.display = 'block';
+      icon.className = icon.className.replace('chevron-down','chevron-up');
+    } else {
+      body.style.display = 'none';
+      icon.className = icon.className.replace('chevron-up','chevron-down');
+    }
+  }
+
+  function verifyChain() {
+    fetch('/api/blockchain/validate')
+      .then(r => r.json())
+      .then(data => {
+        const el = document.getElementById('verifyResult');
+        el.style.display = 'block';
+        if (data.valid) {
+          el.innerHTML = `<div class="alert alert-success py-2 mb-0">
+            <i class="bi bi-shield-check me-2"></i>Chain is <strong>VALID</strong> — ${data.chain_length} blocks verified.
+          </div>`;
+        } else {
+          el.innerHTML = `<div class="alert alert-danger py-2 mb-0">
+            <i class="bi bi-shield-x me-2"></i>Chain is <strong>INVALID</strong> — integrity check failed!
+          </div>`;
+        }
+        setTimeout(() => { el.style.display = 'none'; }, 5000);
+      });
+  }
+
+  // ── Uptime ticker ────────────────────────────────────────────────
+  let _serverUptimeBase = 0;
+  let _localTimeAtSync = Date.now();
+
+  function tickUptime() {
+    const elapsed = Math.floor((Date.now() - _localTimeAtSync) / 1000);
+    const up = _serverUptimeBase + elapsed;
+    document.getElementById('uptime').textContent   = fmtUptime(up);
+    document.getElementById('statUptime').textContent = fmtUptime(up);
+  }
+  setInterval(tickUptime, 1000);
+
+  // ── SocketIO handlers ────────────────────────────────────────────
+  socket.on('connect', () => {
+    socket.emit('join', {role: 'admin'});
+  });
+
+  socket.on('snapshot', data => {
+    _serverUptimeBase = data.uptime_seconds || 0;
+    _localTimeAtSync  = Date.now();
+    updateStatusBar(data);
+    renderDevices(data.devices || [], data.blocked || []);
+    loadChain();
+    addEvent('mine', 'Connected to server', new Date().toLocaleTimeString());
+  });
+
+  socket.on('new_block', block => {
+    chainLength = block.index + 1;
+    document.getElementById('nbBlocks').textContent  = chainLength;
+    document.getElementById('statBlocks').textContent = chainLength;
+    addEvent('mine', `#${block.index} — ${block.transactions.map(t=>t.type).join(', ')} (${shortHash(block.hash)})`, fmt(block.timestamp));
+    loadChain();
+  });
+
+  socket.on('device_update', data => {
+    renderDevices(data.devices || [], data.blocked || []);
+    const actionMap = {
+      connect: 'connect', disconnect: 'disconnect',
+      block: 'block', allow: 'allow',
+    };
+    addEvent(actionMap[data.action] || 'mine', data.mac, new Date().toLocaleTimeString());
+    document.getElementById('nbDevices').textContent = (data.devices || []).length;
+    document.getElementById('statDevices').textContent = (data.devices || []).length;
+    document.getElementById('statBlocked').textContent = (data.blocked || []).length;
+  });
+
+  socket.on('new_message', msg => {
+    addEvent('message', `${msg.sender} → ${msg.receiver}: "${msg.payload}"`, fmt(msg.timestamp));
+  });
+
+  // ── Init ─────────────────────────────────────────────────────────
+  loadChain();
+</script>
+</body>
+</html>

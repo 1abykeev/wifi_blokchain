@@ -1,0 +1,7 @@
+flask>=2.3.0
+flask-socketio>=5.3.0
+python-dotenv>=1.0.0
+
+# Scapy is only needed for REAL mode (SIMULATION_MODE=False).
+# It requires root privileges and a monitor-mode WiFi adapter.
+# scapy>=2.5.0
