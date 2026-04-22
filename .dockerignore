@@ -1,0 +1,18 @@
+.git
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+
+# Don't bake secrets or local config into the image — pass env vars at runtime
+.env
+
+# Don't bake an existing chain into the image — use a Docker volume instead
+data/blockchain.json
+
+# AP scripts are Linux-only and irrelevant inside the container
+scripts/
+
+# Dev/docs files
+CLAUDE.md
+*.md
