@@ -42,7 +42,14 @@
     ::-webkit-scrollbar-track { background: #0f172a; }
     ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
     .btn-sm { font-size: .72rem; padding: 2px 8px; }
-    .event-file { border-color: #a855f7; }
+    .event-file        { border-color: #a855f7; }
+    .event-file-delete { border-color: #ef4444; }
+    .deleted-badge {
+      background: #7f1d1d; color: #fecaca;
+      font-size: .6rem; padding: 1px 6px;
+      border-radius: 4px; margin-left: 6px;
+      letter-spacing: .05em; font-weight: 700;
+    }
     .file-content-details {
       margin-top: 8px; border: 1px solid #334155;
       border-radius: 4px; overflow: hidden;
@@ -305,7 +312,8 @@
     block:      ['event-block',      'bi-slash-circle',       'Blocked'],
     allow:      ['event-allow',      'bi-check-circle',       'Allowed'],
     mine:       ['event-mine',       'bi-boxes',              'Block mined'],
-    file:       ['event-file',       'bi-file-text',          'File Transfer'],
+    file:       ['event-file',        'bi-file-text',         'File Transfer'],
+    file_delete:['event-file-delete', 'bi-trash',             'File Deleted'],
   };
 
   function addEvent(type, text, time) {
@@ -354,9 +362,16 @@
     const container = document.getElementById('chainViewer');
     if (!chain.length) { container.innerHTML = '<p class="text-secondary text-center">Empty chain</p>'; return; }
 
+    // Build set of file_transfer block indices that have been deleted
+    const deletedFiles = new Set();
+    chain.forEach(b => b.transactions.forEach(t => {
+      if (t.type === 'file_delete') deletedFiles.add(t.file_block_index);
+    }));
+
     container.innerHTML = [...chain].reverse().map(b => {
       const txSummary  = b.transactions.map(t => t.type).join(', ');
       const colourClass = b.index === 0 ? 'text-warning' : 'text-info';
+      const isDeleted = deletedFiles.has(b.index);
 
       // Strip content field from file_transfer txns before JSON display
       const stripped = {
@@ -374,7 +389,7 @@
         .filter(t => t.type === 'file_transfer')
         .map(t => `
           <details class="file-content-details">
-            <summary>📄 ${escHtml(t.filename)} &nbsp;·&nbsp; ${(t.size/1024).toFixed(1)} KB &nbsp;·&nbsp; SHA-256: ${escHtml(t.content_hash ? t.content_hash.slice(0,20)+'…' : '')}</summary>
+            <summary>📄 ${escHtml(t.filename)} &nbsp;·&nbsp; ${(t.size/1024).toFixed(1)} KB &nbsp;·&nbsp; SHA-256: ${escHtml(t.content_hash ? t.content_hash.slice(0,20)+'…' : '')}${isDeleted ? '<span class="deleted-badge">DELETED</span>' : ''}</summary>
             <pre>${escHtml(t.content)}</pre>
           </details>`).join('');
 
@@ -488,6 +503,16 @@
       + `(${sizeKB} KB) `
       + `<span class="block-tag">#${data.block_index}</span> `
       + `<span style="font-family:monospace;font-size:.65rem;color:#64748b">${hashShort}</span>`,
+      fmt(data.timestamp)
+    );
+  });
+
+  socket.on('file_deleted', data => {
+    addEvent(
+      'file_delete',
+      `${escHtml(data.sender)} deleted <strong>${escHtml(data.filename)}</strong> `
+      + `<span class="block-tag">#${data.block_index}</span> `
+      + `→ recorded in <span class="block-tag">#${data.delete_block_index}</span>`,
       fmt(data.timestamp)
     );
   });

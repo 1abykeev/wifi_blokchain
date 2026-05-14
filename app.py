@@ -13,6 +13,7 @@ POST /api/device/block          body: {mac}
 POST /api/device/allow          body: {mac}
 POST /api/message/send          body: {sender, receiver, payload, metadata?}
 POST /api/file/send             body: {sender, receiver, filename, content}
+POST /api/file/delete           body: {sender, block_index}
 POST /api/file/verify           body: {content}
 
 GET  /api/devices               list connected devices
@@ -27,6 +28,7 @@ new_block      broadcast   — fired after every mine
 device_update  broadcast   — fired on connect/disconnect/block/allow
 new_message    room emit   — fired to receiver's MAC room + 'admin' room
 new_file       room emit   — fired to receiver's, sender's, and 'admin' rooms
+file_deleted   room emit   — fired to original receiver's, sender's, and 'admin' rooms
 
 SocketIO events (client → server)
 ----------------------------------
@@ -301,6 +303,63 @@ def file_send():
     socketio.emit("new_file", file_event, room="admin",   namespace="/")
 
     return _ok({"message": "File routed and recorded", "block_index": result["block_index"], "content_hash": content_hash}, 201)
+
+
+@app.route("/api/file/delete", methods=["POST"])
+def file_delete():
+    body = request.get_json(silent=True) or {}
+    requester   = body.get("sender", "").strip()
+    block_index = body.get("block_index")
+
+    if not requester:
+        return _bad("'sender' is required")
+    if not isinstance(block_index, int):
+        return _bad("'block_index' must be an integer")
+
+    # Locate the original file_transfer transaction
+    original_tx = None
+    for b in switch.blockchain.chain:
+        if b.index == block_index:
+            for tx in b.transactions:
+                if tx.get("type") == "file_transfer":
+                    original_tx = tx
+                    break
+            break
+
+    if not original_tx:
+        return _bad(f"No file_transfer found at block #{block_index}", 404)
+
+    if original_tx.get("sender") != requester:
+        return _bad("Only the original sender can delete this file", 403)
+
+    # Reject if already deleted
+    for b in switch.blockchain.chain:
+        for tx in b.transactions:
+            if tx.get("type") == "file_delete" and tx.get("file_block_index") == block_index:
+                return _bad("This file was already deleted", 409)
+
+    result = switch.route_file_delete(
+        sender=requester,
+        file_block_index=block_index,
+        filename=original_tx.get("filename", ""),
+    )
+
+    event = {
+        "block_index":        block_index,
+        "delete_block_index": result["block_index"],
+        "filename":           original_tx.get("filename"),
+        "sender":             requester,
+        "receiver":           original_tx.get("receiver"),
+        "timestamp":          result["transaction"]["timestamp"],
+    }
+    socketio.emit("file_deleted", event, room=requester,                   namespace="/")
+    socketio.emit("file_deleted", event, room=original_tx.get("receiver"), namespace="/")
+    socketio.emit("file_deleted", event, room="admin",                     namespace="/")
+
+    return _ok({
+        "message": "File deletion recorded",
+        "delete_block_index": result["block_index"],
+    }, 200)
 
 
 @app.route("/api/file/verify", methods=["POST"])

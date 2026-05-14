@@ -324,6 +324,44 @@
     }
     #removeFileBtn:hover { color: var(--danger); }
 
+    /* ── Rename modal ────────────────────────────────────── */
+    #renameModal {
+      position: fixed; inset: 0; z-index: 2000;
+      display: none; align-items: center; justify-content: center;
+      background: rgba(0,0,0,.72);
+    }
+    .rename-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      width: 88%; max-width: 340px;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .rename-card h3 { font-size: .95rem; font-weight: 700; margin: 0; }
+    .rename-card p  { font-size: .78rem; color: var(--muted); margin: 0; }
+    #renameInput {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      color: var(--text);
+      font-size: .9rem;
+      font-family: monospace;
+      outline: none;
+      width: 100%;
+    }
+    #renameInput:focus { border-color: var(--accent-lt); }
+    .rename-btns { display: flex; gap: 8px; }
+    .rename-btn {
+      flex: 1; padding: 10px; border-radius: 8px;
+      font-size: .85rem; font-weight: 600;
+      cursor: pointer; border: none;
+    }
+    .rename-btn.cancel { background: var(--bg); border: 1px solid var(--border); color: var(--muted); }
+    .rename-btn.confirm { background: var(--accent); color: #fff; }
+    .rename-btn.confirm:active { background: #1d4ed8; }
+
     /* ── File bubble ─────────────────────────────────────── */
     .file-bubble {
       border-radius: 16px;
@@ -358,18 +396,36 @@
       border-radius: 6px; padding: 4px 8px;
       overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
-    .file-bubble-actions { display: flex; gap: 6px; }
+    .file-bubble-meta {
+      font-size: .7rem;
+      color: var(--muted);
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .file-bubble-meta .meta-label { color: var(--muted); }
+    .file-bubble-meta .meta-value { color: var(--text); font-weight: 500; }
+
+    .file-bubble-actions {
+      display: flex; gap: 4px; flex-wrap: wrap;
+    }
     .file-bubble-btn {
-      flex: 1; background: var(--bg);
-      border: 1px solid var(--border); border-radius: 8px;
-      padding: 5px 0; color: var(--text);
-      font-size: .72rem; cursor: pointer; font-weight: 500;
+      flex: 1 1 0; min-width: 52px;
+      background: var(--bg);
+      border: 1px solid var(--border); border-radius: 6px;
+      padding: 5px 4px; color: var(--text);
+      font-size: .68rem; cursor: pointer; font-weight: 500;
+      white-space: nowrap;
     }
     .file-bubble-btn:hover { background: var(--border); }
     .file-bubble-btn.primary {
       background: var(--accent); border-color: var(--accent); color: #fff;
     }
     .file-bubble-btn.primary:hover { background: #1d4ed8; }
+    .file-bubble-btn.danger {
+      background: #3b0d0d; border-color: #7f1d1d; color: #f87171;
+    }
+    .file-bubble-btn.danger:hover { background: #5b1414; }
 
     /* ── Preview modal ───────────────────────────────────── */
     #previewModal {
@@ -479,6 +535,20 @@
 
 </div>
 
+<!-- ── Rename Modal ─────────────────────────────────────── -->
+<div id="renameModal">
+  <div class="rename-card">
+    <h3>Save As</h3>
+    <p>Enter a name for the file before saving</p>
+    <input id="renameInput" type="text" spellcheck="false" autocomplete="off"
+           onkeydown="if(event.key==='Enter')confirmRename();if(event.key==='Escape')closeRenameModal()">
+    <div class="rename-btns">
+      <button class="rename-btn cancel" onclick="closeRenameModal()">Cancel</button>
+      <button class="rename-btn confirm" onclick="confirmRename()">Save</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── Preview Modal ────────────────────────────────────── -->
 <div id="previewModal">
   <div id="previewOverlay" onclick="closePreview()"></div>
@@ -500,7 +570,8 @@
   let manualMode = false;
   let attachedFile = null;
   let attachedContent = null;
-  const fileBubbleStore = {}; // key → {content, filename, hash, blockIdx}
+  const fileBubbleStore = {}; // key → {content, filename, hash, blockIdx, sender, receiver}
+  const deviceLabels = {};    // mac → display name (hostname or mac)
 
   // ── Join ──────────────────────────────────────────────────
   function joinNetwork() {
@@ -512,6 +583,7 @@
     }
     document.getElementById('joinError').textContent = '';
     myId = id;
+    deviceLabels[id] = name || id;
 
     // Register with server
     fetch('/api/device/connect', {
@@ -552,6 +624,9 @@
     fetch('/api/devices')
       .then(r => r.json())
       .then(data => {
+        (data.devices || []).forEach(d => {
+          deviceLabels[d.mac] = d.hostname || d.mac;
+        });
         const sel = document.getElementById('receiverSelect');
         const current = sel.value;
         sel.innerHTML = '<option value="">— select device —</option>'
@@ -740,10 +815,19 @@
     fileBubbleStore[key] = {
       content: data.content, filename: data.filename,
       hash: data.content_hash, blockIdx: data.block_index,
+      sender: data.sender, receiver: data.receiver,
     };
+
+    const isOwner    = data.sender === myId;
+    const fromLabel  = deviceLabels[data.sender]   || data.sender;
+    const toLabel    = deviceLabels[data.receiver] || data.receiver;
+    const deleteBtn  = isOwner
+      ? `<button class="file-bubble-btn danger" onclick="deleteFileByKey('${key}')">Delete</button>`
+      : '';
 
     const row = document.createElement('div');
     row.className = `msg-row ${direction}`;
+    row.dataset.fileKey = key;
     row.innerHTML = `
       <div class="file-bubble file-bubble-${direction}">
         <div class="file-bubble-header">
@@ -753,11 +837,17 @@
             <div class="file-bubble-size">${sizeKB} KB <span class="block-tag">#${data.block_index}</span></div>
           </div>
         </div>
+        <div class="file-bubble-meta">
+          <span><span class="meta-label">From:</span> <span class="meta-value">${escHtml(fromLabel)}</span></span>
+          <span><span class="meta-label">To:</span> <span class="meta-value">${escHtml(toLabel)}</span></span>
+        </div>
         <div class="file-bubble-hash" title="${escHtml(data.content_hash)}">${escHtml(hashShort)}</div>
         <div class="file-bubble-actions">
-          <button class="file-bubble-btn" onclick="showPreviewByKey('${key}')">Preview</button>
-          <button class="file-bubble-btn" onclick="saveFileByKey('${key}')">Save</button>
-          <button class="file-bubble-btn primary" onclick="saveFileAsByKey('${key}')">Save As</button>
+          <button class="file-bubble-btn" onclick="showPreviewByKey('${key}')">Open</button>
+          <button class="file-bubble-btn" onclick="copyFileByKey('${key}')">Copy</button>
+          <button class="file-bubble-btn primary" onclick="saveFileByKey('${key}')">Save</button>
+          <button class="file-bubble-btn" onclick="saveFileAsByKey('${key}')">Save As</button>
+          ${deleteBtn}
         </div>
       </div>
       <div class="msg-meta">${time}</div>`;
@@ -776,22 +866,31 @@
     URL.revokeObjectURL(url);
   }
 
-  async function saveFileAs(content, filename) {
-    if (window.showSaveFilePicker) {
-      try {
-        const handle = await window.showSaveFilePicker({
-          suggestedName: filename,
-          types: [{description: 'Text file', accept: {'text/plain': ['.txt']}}],
-        });
-        const w = await handle.createWritable();
-        await w.write(content);
-        await w.close();
-        return;
-      } catch (e) {
-        if (e.name === 'AbortError') return;
-      }
-    }
-    saveFile(content, filename);
+  let _renameCallback = null;
+
+  function showRenameModal(currentFilename, onConfirm) {
+    _renameCallback = onConfirm;
+    const input = document.getElementById('renameInput');
+    input.value = currentFilename;
+    document.getElementById('renameModal').style.display = 'flex';
+    input.focus();
+    // Select just the name part so user can type over it without losing the extension
+    const dot = currentFilename.lastIndexOf('.');
+    input.setSelectionRange(0, dot > 0 ? dot : currentFilename.length);
+  }
+
+  function closeRenameModal() {
+    document.getElementById('renameModal').style.display = 'none';
+    _renameCallback = null;
+  }
+
+  function confirmRename() {
+    let name = document.getElementById('renameInput').value.trim();
+    if (!name) return;
+    if (!name.toLowerCase().endsWith('.txt')) name += '.txt';
+    const cb = _renameCallback;
+    closeRenameModal();
+    if (cb) cb(name);
   }
 
   function showPreview(filename, content, hash, blockIdx) {
@@ -814,9 +913,71 @@
     const d = fileBubbleStore[key];
     if (d) saveFile(d.content, d.filename);
   }
-  async function saveFileAsByKey(key) {
+
+  function copyFileByKey(key) {
     const d = fileBubbleStore[key];
-    if (d) await saveFileAs(d.content, d.filename);
+    if (!d) return;
+    const onOk   = () => appendSysMsg('📋 Copied ' + d.filename + ' to clipboard');
+    const onFail = () => appendSysMsg('❌ Copy failed');
+
+    // Modern API — needs HTTPS or localhost
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(d.content).then(onOk).catch(legacy);
+    } else {
+      legacy();
+    }
+    function legacy() {
+      const ta = document.createElement('textarea');
+      ta.value = d.content;
+      ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.focus(); ta.select();
+      try { document.execCommand('copy') ? onOk() : onFail(); }
+      catch (e) { onFail(); }
+      ta.remove();
+    }
+  }
+
+  function saveFileAsByKey(key) {
+    const d = fileBubbleStore[key];
+    if (!d) return;
+    showRenameModal(d.filename, async (newName) => {
+      // Try real OS Save dialog when supported (Chrome/Edge on localhost or HTTPS)
+      if (window.showSaveFilePicker) {
+        try {
+          const handle = await window.showSaveFilePicker({
+            suggestedName: newName,
+            types: [{description: 'Text file', accept: {'text/plain': ['.txt']}}],
+          });
+          const w = await handle.createWritable();
+          await w.write(d.content);
+          await w.close();
+          appendSysMsg('💾 Saved as ' + newName);
+          return;
+        } catch (e) {
+          if (e.name === 'AbortError') return;
+        }
+      }
+      // Fallback: download with the new filename
+      saveFile(d.content, newName);
+      appendSysMsg('💾 Saved as ' + newName);
+    });
+  }
+  function deleteFileByKey(key) {
+    const d = fileBubbleStore[key];
+    if (!d) return;
+    if (!confirm(`Delete "${d.filename}"?\n\nThis deletion will be permanently recorded on the blockchain.`)) return;
+
+    fetch('/api/file/delete', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({sender: myId, block_index: d.blockIdx}),
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.error) appendSysMsg('❌ ' + data.error);
+    })
+    .catch(() => appendSysMsg('❌ Failed to delete file'));
   }
 
   // ── Blocked status ────────────────────────────────────────
@@ -859,6 +1020,18 @@
   socket.on('new_file', data => {
     if (data.sender === myId || data.receiver === myId) {
       renderFileBubble(data);
+    }
+  });
+
+  socket.on('file_deleted', data => {
+    const key = 'file_' + data.block_index;
+    const row = document.querySelector(`.msg-row[data-file-key="${key}"]`);
+    if (row) row.remove();
+    delete fileBubbleStore[key];
+
+    if (data.sender === myId || data.receiver === myId) {
+      const who = data.sender === myId ? 'you' : data.sender;
+      appendSysMsg(`🗑️ ${data.filename} deleted by ${who} · block #${data.delete_block_index}`);
     }
   });
 

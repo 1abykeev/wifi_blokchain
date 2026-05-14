@@ -150,6 +150,34 @@ class WiFiSwitch:
                 "transaction": tx,
             }
 
+    def route_file_delete(
+        self,
+        sender: str,
+        file_block_index: int,
+        filename: str,
+    ) -> Dict[str, Any]:
+        """Record a file deletion on the blockchain. The original file_transfer
+        block remains untouched; this adds a separate file_delete transaction
+        referencing it."""
+        with self._lock:
+            tx = {
+                "type": "file_delete",
+                "sender": sender,
+                "file_block_index": file_block_index,
+                "filename": filename,
+                "timestamp": time.time(),
+            }
+            block = self.blockchain.add_transaction_and_mine(tx)
+            logger.info(
+                "File delete recorded by %s for block #%d (delete block #%d)",
+                sender, file_block_index, block.index,
+            )
+            return {
+                "block_index": block.index,
+                "block_hash": block.hash,
+                "transaction": tx,
+            }
+
     def get_status(self) -> Dict[str, Any]:
         with self._lock:
             return {
