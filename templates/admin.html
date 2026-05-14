@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WiFi Blockchain — Admin</title>
+  <title>WiFi Blockchain — Администратор</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
   <style>
@@ -78,12 +78,12 @@
 
 <!-- Navbar -->
 <nav class="navbar navbar-dark px-3 py-2">
-  <span class="navbar-brand fw-bold"><i class="bi bi-wifi me-2"></i>WiFi Blockchain Admin</span>
+  <span class="navbar-brand fw-bold"><i class="bi bi-wifi me-2"></i>WiFi Blockchain Администратор</span>
   <div class="d-flex gap-3 align-items-center" style="font-size:.8rem;">
-    <span><i class="bi bi-box me-1 text-warning"></i>Blocks: <strong id="nbBlocks">—</strong></span>
-    <span><i class="bi bi-phone me-1 text-info"></i>Devices: <strong id="nbDevices">—</strong></span>
-    <span><i class="bi bi-clock me-1 text-secondary"></i>Uptime: <strong id="uptime">—</strong></span>
-    <span id="chainBadge"><i class="bi bi-shield-check me-1 text-success"></i><strong>VALID</strong></span>
+    <span><i class="bi bi-box me-1 text-warning"></i>Блоков: <strong id="nbBlocks">—</strong></span>
+    <span><i class="bi bi-phone me-1 text-info"></i>Устройств: <strong id="nbDevices">—</strong></span>
+    <span><i class="bi bi-clock me-1 text-secondary"></i>Время работы: <strong id="uptime">—</strong></span>
+    <span id="chainBadge"><i class="bi bi-shield-check me-1 text-success"></i><strong>ДЕЙСТВИТЕЛЕН</strong></span>
     <span class="badge bg-secondary" id="modeBadge">SIM</span>
   </div>
 </nav>
@@ -95,31 +95,31 @@
     <div class="col-6 col-md">
       <div class="stat-card">
         <div class="stat-value text-warning" id="statBlocks">0</div>
-        <div class="stat-label">Total Blocks</div>
+        <div class="stat-label">Всего блоков</div>
       </div>
     </div>
     <div class="col-6 col-md">
       <div class="stat-card">
         <div class="stat-value text-info" id="statDevices">0</div>
-        <div class="stat-label">Connected Devices</div>
+        <div class="stat-label">Подключённых устройств</div>
       </div>
     </div>
     <div class="col-6 col-md">
       <div class="stat-card">
         <div class="stat-value text-danger" id="statBlocked">0</div>
-        <div class="stat-label">Blocked Devices</div>
+        <div class="stat-label">Заблокировано устройств</div>
       </div>
     </div>
     <div class="col-6 col-md">
       <div class="stat-card">
         <div class="stat-value" style="color:#c084fc" id="statFiles">0</div>
-        <div class="stat-label">Files Transferred</div>
+        <div class="stat-label">Передано файлов</div>
       </div>
     </div>
     <div class="col-6 col-md">
       <div class="stat-card">
         <div class="stat-value" id="statUptime">0s</div>
-        <div class="stat-label">Uptime</div>
+        <div class="stat-label">Время работы</div>
       </div>
     </div>
   </div>
@@ -129,7 +129,7 @@
     <div class="col-lg-6">
       <div class="card h-100">
         <div class="card-header d-flex justify-content-between align-items-center">
-          <span><i class="bi bi-people me-2"></i>Connected Devices</span>
+          <span><i class="bi bi-people me-2"></i>Подключённые устройства</span>
           <span class="badge bg-info" id="deviceCount">0</span>
         </div>
         <div class="card-body p-0">
@@ -137,16 +137,16 @@
             <thead>
               <tr>
                 <th>MAC / ID</th>
-                <th>Hostname</th>
-                <th>Connected</th>
-                <th>Status</th>
-                <th>Actions</th>
+                <th>Имя хоста</th>
+                <th>Подключён</th>
+                <th>Статус</th>
+                <th>Действия</th>
               </tr>
             </thead>
             <tbody id="devicesBody">
               <tr id="noDevicesRow">
                 <td colspan="5" class="text-center text-secondary py-4">
-                  <i class="bi bi-wifi-off me-2"></i>No devices connected
+                  <i class="bi bi-wifi-off me-2"></i>Нет подключённых устройств
                 </td>
               </tr>
             </tbody>
@@ -159,8 +159,8 @@
     <div class="col-lg-6">
       <div class="card h-100">
         <div class="card-header d-flex justify-content-between align-items-center">
-          <span><i class="bi bi-activity me-2"></i>Live Event Feed</span>
-          <button class="btn btn-sm btn-outline-secondary" onclick="clearFeed()">Clear</button>
+          <span><i class="bi bi-activity me-2"></i>Лента событий</span>
+          <button class="btn btn-sm btn-outline-secondary" onclick="clearFeed()">Очистить</button>
         </div>
         <div class="card-body p-2">
           <div id="eventFeed"></div>
@@ -174,20 +174,20 @@
     <div class="col-12">
       <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center">
-          <span><i class="bi bi-link-45deg me-2"></i>Blockchain</span>
+          <span><i class="bi bi-link-45deg me-2"></i>Блокчейн</span>
           <div class="d-flex gap-2">
             <button class="btn btn-sm btn-outline-warning" onclick="loadChain()">
-              <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+              <i class="bi bi-arrow-clockwise me-1"></i>Обновить
             </button>
             <button class="btn btn-sm btn-outline-success" onclick="verifyChain()">
-              <i class="bi bi-shield-check me-1"></i>Verify Chain
+              <i class="bi bi-shield-check me-1"></i>Проверить цепочку
             </button>
           </div>
         </div>
         <div class="card-body">
           <div id="verifyResult" class="mb-2" style="display:none"></div>
           <div id="chainViewer">
-            <p class="text-secondary text-center py-3">Loading chain…</p>
+            <p class="text-secondary text-center py-3">Загрузка цепочки…</p>
           </div>
         </div>
       </div>
@@ -199,18 +199,18 @@
     <div class="col-12">
       <div class="card">
         <div class="card-header">
-          <i class="bi bi-patch-check me-2"></i>Verify File Integrity
+          <i class="bi bi-patch-check me-2"></i>Проверка целостности файлов
         </div>
         <div class="card-body">
           <p class="text-secondary mb-3" style="font-size:.85rem">
-            Upload any <code>.txt</code> file to check whether it was recorded on this
-            blockchain and confirm its content has not been tampered with since transfer.
+            Загрузите любой <code>.txt</code> файл, чтобы проверить, был ли он записан в этот
+            блокчейн, и убедиться, что его содержимое не было изменено с момента передачи.
           </p>
           <div class="d-flex gap-2 align-items-center flex-wrap">
             <input type="file" id="verifyFileInput" accept=".txt,text/plain"
                    class="form-control form-control-sm" style="max-width:340px;background:#0f172a;color:#e2e8f0;border-color:#334155">
             <button class="btn btn-sm btn-outline-info" onclick="verifyFile()" id="verifyFileBtn">
-              <i class="bi bi-patch-check me-1"></i>Verify
+              <i class="bi bi-patch-check me-1"></i>Проверить
             </button>
           </div>
           <div id="verifyFileResult" class="mt-3" style="display:none"></div>
@@ -262,8 +262,8 @@
     const valid = data.chain_valid !== false;
     const badge = document.getElementById('chainBadge');
     badge.innerHTML = valid
-      ? '<i class="bi bi-shield-check me-1 text-success"></i><strong class="valid-badge">VALID</strong>'
-      : '<i class="bi bi-shield-x me-1 text-danger"></i><strong class="invalid-badge">INVALID</strong>';
+      ? '<i class="bi bi-shield-check me-1 text-success"></i><strong class="valid-badge">ДЕЙСТВИТЕЛЕН</strong>'
+      : '<i class="bi bi-shield-x me-1 text-danger"></i><strong class="invalid-badge">НЕДЕЙСТВИТЕЛЕН</strong>';
 
     if (data.simulation_mode !== undefined) {
       document.getElementById('modeBadge').textContent = data.simulation_mode ? 'SIM' : 'LIVE';
@@ -287,11 +287,11 @@
     tbody.innerHTML = devices.map(d => {
       const isBlocked = blockedSet.has(d.mac);
       const pill = isBlocked
-        ? '<span class="status-pill pill-blocked">Blocked</span>'
-        : '<span class="status-pill pill-online">Online</span>';
+        ? '<span class="status-pill pill-blocked">Заблокирован</span>'
+        : '<span class="status-pill pill-online">В сети</span>';
       const actionBtn = isBlocked
-        ? `<button class="btn btn-sm btn-outline-success" onclick="allowDevice('${d.mac}')"><i class="bi bi-check-circle me-1"></i>Allow</button>`
-        : `<button class="btn btn-sm btn-outline-danger"  onclick="blockDevice('${d.mac}')"><i class="bi bi-slash-circle me-1"></i>Block</button>`;
+        ? `<button class="btn btn-sm btn-outline-success" onclick="allowDevice('${d.mac}')"><i class="bi bi-check-circle me-1"></i>Разрешить</button>`
+        : `<button class="btn btn-sm btn-outline-danger"  onclick="blockDevice('${d.mac}')"><i class="bi bi-slash-circle me-1"></i>Заблокировать</button>`;
       const hostname = d.hostname || d.ip || '—';
       const connTime = d.connected_at ? fmt(d.connected_at) : '—';
       return `<tr>
@@ -306,14 +306,14 @@
 
   // ── Event feed ───────────────────────────────────────────────────
   const eventIcons = {
-    connect:    ['event-connect',    'bi-box-arrow-in-right', 'Connected'],
-    disconnect: ['event-disconnect', 'bi-box-arrow-right',    'Disconnected'],
-    message:    ['event-message',    'bi-chat-dots',          'Message'],
-    block:      ['event-block',      'bi-slash-circle',       'Blocked'],
-    allow:      ['event-allow',      'bi-check-circle',       'Allowed'],
-    mine:       ['event-mine',       'bi-boxes',              'Block mined'],
-    file:       ['event-file',        'bi-file-text',         'File Transfer'],
-    file_delete:['event-file-delete', 'bi-trash',             'File Deleted'],
+    connect:    ['event-connect',    'bi-box-arrow-in-right', 'Подключён'],
+    disconnect: ['event-disconnect', 'bi-box-arrow-right',    'Отключён'],
+    message:    ['event-message',    'bi-chat-dots',          'Сообщение'],
+    block:      ['event-block',      'bi-slash-circle',       'Заблокирован'],
+    allow:      ['event-allow',      'bi-check-circle',       'Разрешён'],
+    mine:       ['event-mine',       'bi-boxes',              'Блок добыт'],
+    file:       ['event-file',        'bi-file-text',         'Передача файла'],
+    file_delete:['event-file-delete', 'bi-trash',             'Файл удалён'],
   };
 
   function addEvent(type, text, time) {
@@ -360,7 +360,7 @@
     chainLength = chain.length;
     fileCount   = 0;
     const container = document.getElementById('chainViewer');
-    if (!chain.length) { container.innerHTML = '<p class="text-secondary text-center">Empty chain</p>'; return; }
+    if (!chain.length) { container.innerHTML = '<p class="text-secondary text-center">Цепочка пуста</p>'; return; }
 
     // Build set of file_transfer block indices that have been deleted
     const deletedFiles = new Set();
@@ -430,11 +430,11 @@
         el.style.display = 'block';
         if (data.valid) {
           el.innerHTML = `<div class="alert alert-success py-2 mb-0">
-            <i class="bi bi-shield-check me-2"></i>Chain is <strong>VALID</strong> — ${data.chain_length} blocks verified.
+            <i class="bi bi-shield-check me-2"></i>Цепочка <strong>ДЕЙСТВИТЕЛЬНА</strong> — проверено ${data.chain_length} блоков.
           </div>`;
         } else {
           el.innerHTML = `<div class="alert alert-danger py-2 mb-0">
-            <i class="bi bi-shield-x me-2"></i>Chain is <strong>INVALID</strong> — integrity check failed!
+            <i class="bi bi-shield-x me-2"></i>Цепочка <strong>НЕДЕЙСТВИТЕЛЬНА</strong> — проверка целостности не прошла!
           </div>`;
         }
         setTimeout(() => { el.style.display = 'none'; }, 5000);
@@ -464,7 +464,7 @@
     updateStatusBar(data);
     renderDevices(data.devices || [], data.blocked || []);
     loadChain();
-    addEvent('mine', 'Connected to server', new Date().toLocaleTimeString());
+    addEvent('mine', 'Подключено к серверу', new Date().toLocaleTimeString());
   });
 
   socket.on('new_block', block => {
@@ -526,13 +526,13 @@
     if (!input.files[0]) {
       resultEl.style.display = 'block';
       resultEl.innerHTML = `<div class="alert alert-warning py-2 mb-0">
-        <i class="bi bi-exclamation-triangle me-2"></i>Please select a .txt file first.
+        <i class="bi bi-exclamation-triangle me-2"></i>Сначала выберите .txt файл.
       </div>`;
       return;
     }
 
     btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Verifying…';
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Проверка…';
 
     const reader = new FileReader();
     reader.onload = function (e) {
@@ -550,12 +550,12 @@
             : '—';
           resultEl.innerHTML = `<div class="alert alert-success py-2 mb-0">
             <i class="bi bi-patch-check-fill me-2"></i>
-            <strong>Verified</strong> —
+            <strong>Подтверждено</strong> —
             <strong>${escHtml(data.filename)}</strong>
-            sent by <code>${escHtml(data.sender)}</code>
-            to <code>${escHtml(data.receiver)}</code>
-            at ${ts},
-            block <span class="block-tag">#${data.block_index}</span><br>
+            отправлен от <code>${escHtml(data.sender)}</code>
+            кому <code>${escHtml(data.receiver)}</code>
+            в ${ts},
+            блок <span class="block-tag">#${data.block_index}</span><br>
             <span style="font-family:monospace;font-size:.7rem;color:#6ee7b7">
               SHA-256: ${escHtml(data.content_hash)}
             </span>
@@ -563,8 +563,8 @@
         } else {
           resultEl.innerHTML = `<div class="alert alert-danger py-2 mb-0">
             <i class="bi bi-x-octagon-fill me-2"></i>
-            <strong>Not found on chain</strong> —
-            this file was never recorded here, or its content was modified after transfer.<br>
+            <strong>Не найдено в цепочке</strong> —
+            этот файл не был записан в блокчейн или его содержимое было изменено после передачи.<br>
             <span style="font-family:monospace;font-size:.7rem;color:#fca5a5">
               SHA-256: ${escHtml(data.content_hash)}
             </span>
@@ -574,12 +574,12 @@
       .catch(() => {
         resultEl.style.display = 'block';
         resultEl.innerHTML = `<div class="alert alert-danger py-2 mb-0">
-          <i class="bi bi-exclamation-octagon me-2"></i>Server error during verification.
+          <i class="bi bi-exclamation-octagon me-2"></i>Ошибка сервера при проверке.
         </div>`;
       })
       .finally(() => {
         btn.disabled = false;
-        btn.innerHTML = '<i class="bi bi-patch-check me-1"></i>Verify';
+        btn.innerHTML = '<i class="bi bi-patch-check me-1"></i>Проверить';
       });
     };
     reader.readAsText(input.files[0], 'utf-8');

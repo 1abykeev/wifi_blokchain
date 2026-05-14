@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>WiFi Chat</title>
+  <title>WiFi Чат</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -471,44 +471,44 @@
 <!-- ── Join Screen ─────────────────────────────────────────── -->
 <div id="joinScreen">
   <div class="logo">📡</div>
-  <h1>WiFi Chat</h1>
-  <p>Enter your device ID to join the network.<br>Use your MAC address or any unique name.</p>
-  <input id="deviceIdInput" type="text" placeholder="Device ID (e.g. AA:BB:CC:DD:EE:01)"
+  <h1>WiFi Чат</h1>
+  <p>Введите ID устройства для входа в сеть.<br>Используйте MAC-адрес или любое уникальное имя.</p>
+  <input id="deviceIdInput" type="text" placeholder="ID устройства (напр. AA:BB:CC:DD:EE:01)"
          autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
-  <input id="hostnameInput" type="text" placeholder="Your name (optional)">
-  <button onclick="joinNetwork()">Join Network</button>
+  <input id="hostnameInput" type="text" placeholder="Ваше имя (необязательно)">
+  <button onclick="joinNetwork()">Войти в сеть</button>
   <div id="joinError"></div>
 </div>
 
 <!-- ── Chat Screen ─────────────────────────────────────────── -->
 <div id="chatScreen">
 
-  <div id="blockedBanner">🚫 You are blocked by the admin — you cannot send messages or files</div>
+  <div id="blockedBanner">🚫 Вы заблокированы администратором — отправка сообщений и файлов недоступна</div>
 
   <!-- Header -->
   <div id="chatHeader">
     <div class="avatar" id="avatarLetter">?</div>
     <div class="info">
       <div class="device-id" id="headerDeviceId">—</div>
-      <div class="sub">WiFi Blockchain Network</div>
+      <div class="sub">Сеть WiFi Blockchain</div>
     </div>
-    <span class="badge" id="statusBadge">Online</span>
+    <span class="badge" id="statusBadge">В сети</span>
   </div>
 
   <!-- Receiver selector -->
   <div id="receiverBar">
-    <label>To:</label>
+    <label>Кому:</label>
     <select id="receiverSelect">
-      <option value="">— select device —</option>
+      <option value="">— выберите устройство —</option>
     </select>
-    <input id="manualReceiver" type="text" placeholder="or type ID…"
+    <input id="manualReceiver" type="text" placeholder="или введите ID…"
            autocomplete="off" autocorrect="off" autocapitalize="off">
     <button id="toggleManual" onclick="toggleManualInput()">✎</button>
   </div>
 
   <!-- Messages -->
   <div id="messages">
-    <div class="sys-msg">You joined the network</div>
+    <div class="sys-msg">Вы вошли в сеть</div>
   </div>
 
   <!-- Hidden file input -->
@@ -520,14 +520,14 @@
       <span>📎</span>
       <span class="chip-name" id="chipName"></span>
       <span class="chip-size" id="chipSize"></span>
-      <button id="removeFileBtn" onclick="removeFile()" title="Remove attachment">✕</button>
+      <button id="removeFileBtn" onclick="removeFile()" title="Удалить вложение">✕</button>
     </div>
   </div>
 
   <!-- Input -->
   <div id="inputBar">
-    <button id="attachBtn" onclick="triggerFileInput()" title="Attach .txt file">📎</button>
-    <textarea id="msgInput" rows="1" placeholder="Message…"
+    <button id="attachBtn" onclick="triggerFileInput()" title="Прикрепить .txt файл">📎</button>
+    <textarea id="msgInput" rows="1" placeholder="Сообщение…"
               oninput="autoResize(this)"
               onkeydown="handleKey(event)"></textarea>
     <button id="sendBtn" onclick="sendMessage()" disabled>➤</button>
@@ -538,13 +538,13 @@
 <!-- ── Rename Modal ─────────────────────────────────────── -->
 <div id="renameModal">
   <div class="rename-card">
-    <h3>Save As</h3>
-    <p>Enter a name for the file before saving</p>
+    <h3>Сохранить как</h3>
+    <p>Введите имя файла перед сохранением</p>
     <input id="renameInput" type="text" spellcheck="false" autocomplete="off"
            onkeydown="if(event.key==='Enter')confirmRename();if(event.key==='Escape')closeRenameModal()">
     <div class="rename-btns">
-      <button class="rename-btn cancel" onclick="closeRenameModal()">Cancel</button>
-      <button class="rename-btn confirm" onclick="confirmRename()">Save</button>
+      <button class="rename-btn cancel" onclick="closeRenameModal()">Отмена</button>
+      <button class="rename-btn confirm" onclick="confirmRename()">Сохранить</button>
     </div>
   </div>
 </div>
@@ -578,7 +578,7 @@
     const id = document.getElementById('deviceIdInput').value.trim();
     const name = document.getElementById('hostnameInput').value.trim();
     if (!id) {
-      document.getElementById('joinError').textContent = 'Please enter a device ID.';
+      document.getElementById('joinError').textContent = 'Введите ID устройства.';
       return;
     }
     document.getElementById('joinError').textContent = '';
@@ -615,7 +615,7 @@
       refreshDevices();
     })
     .catch(() => {
-      document.getElementById('joinError').textContent = 'Could not connect to server.';
+      document.getElementById('joinError').textContent = 'Не удалось подключиться к серверу.';
     });
   }
 
@@ -629,7 +629,7 @@
         });
         const sel = document.getElementById('receiverSelect');
         const current = sel.value;
-        sel.innerHTML = '<option value="">— select device —</option>'
+        sel.innerHTML = '<option value="">— выберите устройство —</option>'
           + (data.devices || [])
               .filter(d => d.mac !== myId)
               .map(d => {
@@ -699,7 +699,7 @@
       }
       removeFile();
     })
-    .catch(() => appendSysMsg('❌ Failed to send file'));
+    .catch(() => appendSysMsg('❌ Ошибка отправки файла'));
   }
 
   // ── File attach ───────────────────────────────────────────
@@ -717,7 +717,7 @@
     document.getElementById('attachBtn').classList.remove('has-file');
     const msgInput = document.getElementById('msgInput');
     msgInput.disabled = false;
-    msgInput.placeholder = 'Message…';
+    msgInput.placeholder = 'Сообщение…';
   }
 
   document.getElementById('fileInput').addEventListener('change', function () {
@@ -725,12 +725,12 @@
     if (!file) return;
 
     if (!file.name.toLowerCase().endsWith('.txt')) {
-      appendSysMsg('❌ Only .txt files are supported');
+      appendSysMsg('❌ Поддерживаются только .txt файлы');
       this.value = '';
       return;
     }
     if (file.size > 500 * 1024) {
-      appendSysMsg('❌ File exceeds the 500 KB limit');
+      appendSysMsg('❌ Файл превышает лимит 500 КБ');
       this.value = '';
       return;
     }
@@ -748,7 +748,7 @@
 
       const msgInput = document.getElementById('msgInput');
       msgInput.disabled = true;
-      msgInput.placeholder = 'Remove file to type a message';
+      msgInput.placeholder = 'Удалите файл, чтобы написать сообщение';
     };
     reader.readAsText(file, 'utf-8');
     this.value = ''; // reset so same file can be re-attached
@@ -822,7 +822,7 @@
     const fromLabel  = deviceLabels[data.sender]   || data.sender;
     const toLabel    = deviceLabels[data.receiver] || data.receiver;
     const deleteBtn  = isOwner
-      ? `<button class="file-bubble-btn danger" onclick="deleteFileByKey('${key}')">Delete</button>`
+      ? `<button class="file-bubble-btn danger" onclick="deleteFileByKey('${key}')">Удалить</button>`
       : '';
 
     const row = document.createElement('div');
@@ -838,15 +838,15 @@
           </div>
         </div>
         <div class="file-bubble-meta">
-          <span><span class="meta-label">From:</span> <span class="meta-value">${escHtml(fromLabel)}</span></span>
-          <span><span class="meta-label">To:</span> <span class="meta-value">${escHtml(toLabel)}</span></span>
+          <span><span class="meta-label">От:</span> <span class="meta-value">${escHtml(fromLabel)}</span></span>
+          <span><span class="meta-label">Кому:</span> <span class="meta-value">${escHtml(toLabel)}</span></span>
         </div>
         <div class="file-bubble-hash" title="${escHtml(data.content_hash)}">${escHtml(hashShort)}</div>
         <div class="file-bubble-actions">
-          <button class="file-bubble-btn" onclick="showPreviewByKey('${key}')">Open</button>
-          <button class="file-bubble-btn" onclick="copyFileByKey('${key}')">Copy</button>
-          <button class="file-bubble-btn primary" onclick="saveFileByKey('${key}')">Save</button>
-          <button class="file-bubble-btn" onclick="saveFileAsByKey('${key}')">Save As</button>
+          <button class="file-bubble-btn" onclick="showPreviewByKey('${key}')">Открыть</button>
+          <button class="file-bubble-btn" onclick="copyFileByKey('${key}')">Копировать</button>
+          <button class="file-bubble-btn primary" onclick="saveFileByKey('${key}')">Сохранить</button>
+          <button class="file-bubble-btn" onclick="saveFileAsByKey('${key}')">Сохранить как</button>
           ${deleteBtn}
         </div>
       </div>
@@ -917,8 +917,8 @@
   function copyFileByKey(key) {
     const d = fileBubbleStore[key];
     if (!d) return;
-    const onOk   = () => appendSysMsg('📋 Copied ' + d.filename + ' to clipboard');
-    const onFail = () => appendSysMsg('❌ Copy failed');
+    const onOk   = () => appendSysMsg('📋 Скопировано ' + d.filename + ' в буфер обмена');
+    const onFail = () => appendSysMsg('❌ Ошибка копирования');
 
     // Modern API — needs HTTPS or localhost
     if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -952,7 +952,7 @@
           const w = await handle.createWritable();
           await w.write(d.content);
           await w.close();
-          appendSysMsg('💾 Saved as ' + newName);
+          appendSysMsg('💾 Сохранено как ' + newName);
           return;
         } catch (e) {
           if (e.name === 'AbortError') return;
@@ -960,13 +960,13 @@
       }
       // Fallback: download with the new filename
       saveFile(d.content, newName);
-      appendSysMsg('💾 Saved as ' + newName);
+      appendSysMsg('💾 Сохранено как ' + newName);
     });
   }
   function deleteFileByKey(key) {
     const d = fileBubbleStore[key];
     if (!d) return;
-    if (!confirm(`Delete "${d.filename}"?\n\nThis deletion will be permanently recorded on the blockchain.`)) return;
+    if (!confirm(`Удалить "${d.filename}"?\n\nЭто действие будет навсегда записано в блокчейн.`)) return;
 
     fetch('/api/file/delete', {
       method: 'POST',
@@ -977,7 +977,7 @@
     .then(data => {
       if (data.error) appendSysMsg('❌ ' + data.error);
     })
-    .catch(() => appendSysMsg('❌ Failed to delete file'));
+    .catch(() => appendSysMsg('❌ Ошибка удаления файла'));
   }
 
   // ── Blocked status ────────────────────────────────────────
@@ -988,7 +988,7 @@
     document.getElementById('attachBtn').disabled = blocked;
     if (blocked) removeFile();
     const badge = document.getElementById('statusBadge');
-    badge.textContent = blocked ? 'Blocked' : 'Online';
+    badge.textContent = blocked ? 'Заблокирован' : 'В сети';
     badge.className   = blocked ? 'badge blocked' : 'badge';
   }
 
@@ -1005,7 +1005,7 @@
       const blocked = (data.blocked || []).includes(myId);
       if (blocked !== isBlocked) {
         applyBlockedState(blocked);
-        appendSysMsg(blocked ? '🚫 Admin blocked your device' : '✅ Admin unblocked your device');
+        appendSysMsg(blocked ? '🚫 Администратор заблокировал ваше устройство' : '✅ Администратор разблокировал ваше устройство');
       }
     }
     refreshDevices();
@@ -1030,8 +1030,8 @@
     delete fileBubbleStore[key];
 
     if (data.sender === myId || data.receiver === myId) {
-      const who = data.sender === myId ? 'you' : data.sender;
-      appendSysMsg(`🗑️ ${data.filename} deleted by ${who} · block #${data.delete_block_index}`);
+      const who = data.sender === myId ? 'вами' : data.sender;
+      appendSysMsg(`🗑️ ${data.filename} удалён ${who} · блок #${data.delete_block_index}`);
     }
   });
 
