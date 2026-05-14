@@ -119,6 +119,37 @@ class WiFiSwitch:
                 "transaction": tx,
             }
 
+    def route_file(
+        self,
+        sender: str,
+        receiver: str,
+        filename: str,
+        content: str,
+        content_hash: str,
+        size: int,
+    ) -> Dict[str, Any]:
+        """Route a .txt file between devices and record it on the blockchain."""
+        with self._lock:
+            tx = {
+                "type": "file_transfer",
+                "sender": sender,
+                "receiver": receiver,
+                "filename": filename,
+                "content": content,
+                "content_hash": content_hash,
+                "size": size,
+                "timestamp": time.time(),
+            }
+            block = self.blockchain.add_transaction_and_mine(tx)
+            logger.info(
+                "File routed %s -> %s '%s' (block #%d)", sender, receiver, filename, block.index
+            )
+            return {
+                "block_index": block.index,
+                "block_hash": block.hash,
+                "transaction": tx,
+            }
+
     def get_status(self) -> Dict[str, Any]:
         with self._lock:
             return {

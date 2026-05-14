@@ -12,6 +12,8 @@ POST /api/device/disconnect     body: {mac}
 POST /api/device/block          body: {mac}
 POST /api/device/allow          body: {mac}
 POST /api/message/send          body: {sender, receiver, payload, metadata?}
+POST /api/file/send             body: {sender, receiver, filename, content}
+POST /api/file/verify           body: {content}
 
 GET  /api/devices               list connected devices
 GET  /api/blocked-devices       list blocked MACs
@@ -24,6 +26,7 @@ SocketIO events (server → client)
 new_block      broadcast   — fired after every mine
 device_update  broadcast   — fired on connect/disconnect/block/allow
 new_message    room emit   — fired to receiver's MAC room + 'admin' room
+new_file       room emit   — fired to receiver's, sender's, and 'admin' rooms
 
 SocketIO events (client → server)
 ----------------------------------
@@ -32,6 +35,7 @@ join   {mac, role?}  — client joins their MAC room; role='admin' joins admin r
 
 import os
 import time
+import hashlib
 import logging
 from flask import Flask, request, jsonify, redirect, render_template, url_for
 from flask_socketio import SocketIO, join_room, emit
@@ -234,6 +238,95 @@ def message_send():
     socketio.emit("new_message", msg_event, room="admin", namespace="/")
 
     return _ok({"message": "Message routed and recorded", **result}, 201)
+
+
+# ------------------------------------------------------------------
+# File endpoints
+# ------------------------------------------------------------------
+
+_MAX_FILE_BYTES = 500 * 1024  # 500 KB
+
+
+@app.route("/api/file/send", methods=["POST"])
+def file_send():
+    body = request.get_json(silent=True) or {}
+    sender   = body.get("sender",   "").strip()
+    receiver = body.get("receiver", "").strip()
+    filename = body.get("filename", "").strip()
+    content  = body.get("content",  "")
+
+    if not sender:
+        return _bad("'sender' is required")
+    if not receiver:
+        return _bad("'receiver' is required")
+    if not filename:
+        return _bad("'filename' is required")
+    if not isinstance(content, str):
+        return _bad("'content' must be a string")
+    if not filename.lower().endswith(".txt"):
+        return _bad("Only .txt files are supported", 400)
+    if len(content.encode("utf-8")) > _MAX_FILE_BYTES:
+        return _bad("File exceeds the 500 KB limit", 413)
+    if sender not in switch.connected_devices:
+        return _bad(f"Sender '{sender}' is not connected", 404)
+    if receiver not in switch.connected_devices:
+        return _bad(f"Receiver '{receiver}' is not connected", 404)
+    if sender in blocked_devices:
+        return _bad(f"Device '{sender}' is blocked", 403)
+
+    content_hash = hashlib.sha256(content.encode("utf-8")).hexdigest()
+    size = len(content.encode("utf-8"))
+
+    result = switch.route_file(
+        sender=sender,
+        receiver=receiver,
+        filename=filename,
+        content=content,
+        content_hash=content_hash,
+        size=size,
+    )
+
+    file_event = {
+        "sender":       sender,
+        "receiver":     receiver,
+        "filename":     filename,
+        "content":      content,
+        "content_hash": content_hash,
+        "size":         size,
+        "timestamp":    result["transaction"]["timestamp"],
+        "block_index":  result["block_index"],
+    }
+    socketio.emit("new_file", file_event, room=receiver,  namespace="/")
+    socketio.emit("new_file", file_event, room=sender,    namespace="/")
+    socketio.emit("new_file", file_event, room="admin",   namespace="/")
+
+    return _ok({"message": "File routed and recorded", "block_index": result["block_index"], "content_hash": content_hash}, 201)
+
+
+@app.route("/api/file/verify", methods=["POST"])
+def file_verify():
+    body = request.get_json(silent=True) or {}
+    content = body.get("content", "")
+
+    if not isinstance(content, str):
+        return _bad("'content' must be a string")
+
+    content_hash = hashlib.sha256(content.encode("utf-8")).hexdigest()
+
+    for block in switch.blockchain.chain:
+        for tx in block.transactions:
+            if tx.get("type") == "file_transfer" and tx.get("content_hash") == content_hash:
+                return _ok({
+                    "verified":     True,
+                    "block_index":  block.index,
+                    "filename":     tx.get("filename"),
+                    "sender":       tx.get("sender"),
+                    "receiver":     tx.get("receiver"),
+                    "timestamp":    tx.get("timestamp"),
+                    "content_hash": content_hash,
+                })
+
+    return _ok({"verified": False, "content_hash": content_hash})
 
 
 # ------------------------------------------------------------------
