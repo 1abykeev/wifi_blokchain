@@ -323,6 +323,91 @@
       cursor: pointer; padding: 0; line-height: 1; flex-shrink: 0;
     }
     #removeFileBtn:hover { color: var(--danger); }
+
+    /* ── File bubble ─────────────────────────────────────── */
+    .file-bubble {
+      border-radius: 16px;
+      padding: 12px 14px;
+      min-width: 220px;
+      max-width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .file-bubble.file-bubble-sent {
+      background: #1a2d4a;
+      border: 1px solid #2563eb55;
+      border-bottom-right-radius: 4px;
+    }
+    .file-bubble.file-bubble-recv {
+      background: #1a2535;
+      border: 1px solid var(--border);
+      border-bottom-left-radius: 4px;
+    }
+    .file-bubble-header { display: flex; align-items: center; gap: 10px; }
+    .file-icon { font-size: 1.6rem; flex-shrink: 0; }
+    .file-bubble-info { flex: 1; overflow: hidden; }
+    .file-bubble-name {
+      font-size: .85rem; font-weight: 600; color: var(--text);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .file-bubble-size { font-size: .72rem; color: var(--muted); margin-top: 2px; }
+    .file-bubble-hash {
+      font-family: monospace; font-size: .68rem;
+      color: var(--muted); background: var(--bg);
+      border-radius: 6px; padding: 4px 8px;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .file-bubble-actions { display: flex; gap: 6px; }
+    .file-bubble-btn {
+      flex: 1; background: var(--bg);
+      border: 1px solid var(--border); border-radius: 8px;
+      padding: 5px 0; color: var(--text);
+      font-size: .72rem; cursor: pointer; font-weight: 500;
+    }
+    .file-bubble-btn:hover { background: var(--border); }
+    .file-bubble-btn.primary {
+      background: var(--accent); border-color: var(--accent); color: #fff;
+    }
+    .file-bubble-btn.primary:hover { background: #1d4ed8; }
+
+    /* ── Preview modal ───────────────────────────────────── */
+    #previewModal {
+      position: fixed; inset: 0; z-index: 1000;
+      display: none; align-items: flex-end; justify-content: center;
+    }
+    #previewOverlay { position: absolute; inset: 0; background: rgba(0,0,0,.65); }
+    .modal-card {
+      position: relative; z-index: 1;
+      background: var(--surface);
+      border-top-left-radius: 20px; border-top-right-radius: 20px;
+      width: 100%; max-height: 80dvh;
+      display: flex; flex-direction: column;
+      border: 1px solid var(--border); border-bottom: none;
+    }
+    .modal-header {
+      display: flex; align-items: center;
+      padding: 14px 16px 10px; gap: 10px;
+      border-bottom: 1px solid var(--border); flex-shrink: 0;
+    }
+    .modal-title { flex: 1; font-weight: 600; font-size: .9rem; word-break: break-all; }
+    .modal-close {
+      background: none; border: none;
+      color: var(--muted); font-size: 1.2rem; cursor: pointer; padding: 0;
+    }
+    .modal-meta {
+      padding: 6px 16px; font-size: .68rem;
+      color: var(--muted); border-bottom: 1px solid var(--border);
+      font-family: monospace; flex-shrink: 0;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    #previewContent {
+      flex: 1; overflow-y: auto;
+      padding: 14px 16px;
+      font-family: monospace; font-size: .8rem;
+      line-height: 1.6; color: var(--text);
+      white-space: pre-wrap; word-break: break-word; margin: 0;
+    }
   </style>
 </head>
 <body>
@@ -342,7 +427,7 @@
 <!-- ── Chat Screen ─────────────────────────────────────────── -->
 <div id="chatScreen">
 
-  <div id="blockedBanner">🚫 You are blocked by the admin — you cannot send messages</div>
+  <div id="blockedBanner">🚫 You are blocked by the admin — you cannot send messages or files</div>
 
   <!-- Header -->
   <div id="chatHeader">
@@ -394,6 +479,19 @@
 
 </div>
 
+<!-- ── Preview Modal ────────────────────────────────────── -->
+<div id="previewModal">
+  <div id="previewOverlay" onclick="closePreview()"></div>
+  <div class="modal-card">
+    <div class="modal-header">
+      <span class="modal-title" id="previewFilename"></span>
+      <button class="modal-close" onclick="closePreview()" title="Close">✕</button>
+    </div>
+    <div class="modal-meta" id="previewMeta"></div>
+    <pre id="previewContent"></pre>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/socket.io@4.6.1/client-dist/socket.io.min.js"></script>
 <script>
   const socket = io();
@@ -402,6 +500,7 @@
   let manualMode = false;
   let attachedFile = null;
   let attachedContent = null;
+  const fileBubbleStore = {}; // key → {content, filename, hash, blockIdx}
 
   // ── Join ──────────────────────────────────────────────────
   function joinNetwork() {
@@ -524,9 +623,6 @@
         return;
       }
       removeFile();
-      // Sent bubble rendered via new_file socket event (Step 3).
-      // Show a minimal confirmation for now.
-      appendSysMsg('📎 Sent ' + filename + ' — block #' + data.block_index);
     })
     .catch(() => appendSysMsg('❌ Failed to send file'));
   }
@@ -630,6 +726,99 @@
             .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
   }
 
+  // ── File receive: render bubble ───────────────────────
+  function renderFileBubble(data) {
+    const container = document.getElementById('messages');
+    const direction = data.sender === myId ? 'sent' : 'recv';
+    const time = data.timestamp
+      ? new Date(data.timestamp * 1000).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})
+      : '';
+    const sizeKB    = (data.size / 1024).toFixed(1);
+    const hashShort = data.content_hash.slice(0, 16) + '…';
+
+    const key = 'file_' + data.block_index;
+    fileBubbleStore[key] = {
+      content: data.content, filename: data.filename,
+      hash: data.content_hash, blockIdx: data.block_index,
+    };
+
+    const row = document.createElement('div');
+    row.className = `msg-row ${direction}`;
+    row.innerHTML = `
+      <div class="file-bubble file-bubble-${direction}">
+        <div class="file-bubble-header">
+          <span class="file-icon">📄</span>
+          <div class="file-bubble-info">
+            <div class="file-bubble-name" title="${escHtml(data.filename)}">${escHtml(data.filename)}</div>
+            <div class="file-bubble-size">${sizeKB} KB <span class="block-tag">#${data.block_index}</span></div>
+          </div>
+        </div>
+        <div class="file-bubble-hash" title="${escHtml(data.content_hash)}">${escHtml(hashShort)}</div>
+        <div class="file-bubble-actions">
+          <button class="file-bubble-btn" onclick="showPreviewByKey('${key}')">Preview</button>
+          <button class="file-bubble-btn" onclick="saveFileByKey('${key}')">Save</button>
+          <button class="file-bubble-btn primary" onclick="saveFileAsByKey('${key}')">Save As</button>
+        </div>
+      </div>
+      <div class="msg-meta">${time}</div>`;
+    container.appendChild(row);
+    container.scrollTop = container.scrollHeight;
+  }
+
+  // ── File save / preview ───────────────────────────────
+  function saveFile(content, filename) {
+    const blob = new Blob([content], {type: 'text/plain;charset=utf-8'});
+    const url  = URL.createObjectURL(blob);
+    const a    = Object.assign(document.createElement('a'), {href: url, download: filename});
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  async function saveFileAs(content, filename) {
+    if (window.showSaveFilePicker) {
+      try {
+        const handle = await window.showSaveFilePicker({
+          suggestedName: filename,
+          types: [{description: 'Text file', accept: {'text/plain': ['.txt']}}],
+        });
+        const w = await handle.createWritable();
+        await w.write(content);
+        await w.close();
+        return;
+      } catch (e) {
+        if (e.name === 'AbortError') return;
+      }
+    }
+    saveFile(content, filename);
+  }
+
+  function showPreview(filename, content, hash, blockIdx) {
+    document.getElementById('previewFilename').textContent = filename;
+    document.getElementById('previewMeta').textContent =
+      'SHA-256: ' + hash + '  ·  block #' + blockIdx;
+    document.getElementById('previewContent').textContent = content;
+    document.getElementById('previewModal').style.display = 'flex';
+  }
+
+  function closePreview() {
+    document.getElementById('previewModal').style.display = 'none';
+  }
+
+  function showPreviewByKey(key) {
+    const d = fileBubbleStore[key];
+    if (d) showPreview(d.filename, d.content, d.hash, d.blockIdx);
+  }
+  function saveFileByKey(key) {
+    const d = fileBubbleStore[key];
+    if (d) saveFile(d.content, d.filename);
+  }
+  async function saveFileAsByKey(key) {
+    const d = fileBubbleStore[key];
+    if (d) await saveFileAs(d.content, d.filename);
+  }
+
   // ── Blocked status ────────────────────────────────────────
   function applyBlockedState(blocked) {
     isBlocked = blocked;
@@ -664,6 +853,12 @@
   socket.on('new_message', msg => {
     if (msg.receiver === myId) {
       appendBubble('recv', msg.payload, msg.timestamp, msg.block_index);
+    }
+  });
+
+  socket.on('new_file', data => {
+    if (data.sender === myId || data.receiver === myId) {
+      renderFileBubble(data);
     }
   });
 
