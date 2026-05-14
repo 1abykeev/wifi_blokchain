@@ -42,6 +42,29 @@
     ::-webkit-scrollbar-track { background: #0f172a; }
     ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
     .btn-sm { font-size: .72rem; padding: 2px 8px; }
+    .event-file { border-color: #a855f7; }
+    .file-content-details {
+      margin-top: 8px; border: 1px solid #334155;
+      border-radius: 4px; overflow: hidden;
+    }
+    .file-content-details summary {
+      padding: 6px 10px; cursor: pointer;
+      font-size: .75rem; color: #94a3b8;
+      background: #0d1526; user-select: none;
+      list-style: none;
+    }
+    .file-content-details summary::-webkit-details-marker { display: none; }
+    .file-content-details summary::before { content: '▶ '; font-size: .65rem; }
+    details[open].file-content-details summary::before { content: '▼ '; }
+    .file-content-details summary:hover { background: #1a2740; }
+    .file-content-details pre {
+      background: #0d1526; color: #7dd3fc;
+      border-radius: 0; padding: 10px;
+      font-size: .72rem; overflow-x: auto; margin: 0;
+      border-top: 1px solid #1e293b;
+      max-height: 260px; overflow-y: auto;
+      white-space: pre-wrap; word-break: break-word;
+    }
   </style>
 </head>
 <body>
@@ -62,25 +85,31 @@
 
   <!-- Stat cards -->
   <div class="row g-2 mb-3">
-    <div class="col-6 col-md-3">
+    <div class="col-6 col-md">
       <div class="stat-card">
         <div class="stat-value text-warning" id="statBlocks">0</div>
         <div class="stat-label">Total Blocks</div>
       </div>
     </div>
-    <div class="col-6 col-md-3">
+    <div class="col-6 col-md">
       <div class="stat-card">
         <div class="stat-value text-info" id="statDevices">0</div>
         <div class="stat-label">Connected Devices</div>
       </div>
     </div>
-    <div class="col-6 col-md-3">
+    <div class="col-6 col-md">
       <div class="stat-card">
         <div class="stat-value text-danger" id="statBlocked">0</div>
         <div class="stat-label">Blocked Devices</div>
       </div>
     </div>
-    <div class="col-6 col-md-3">
+    <div class="col-6 col-md">
+      <div class="stat-card">
+        <div class="stat-value" style="color:#c084fc" id="statFiles">0</div>
+        <div class="stat-label">Files Transferred</div>
+      </div>
+    </div>
+    <div class="col-6 col-md">
       <div class="stat-card">
         <div class="stat-value" id="statUptime">0s</div>
         <div class="stat-label">Uptime</div>
@@ -164,8 +193,13 @@
 <script src="https://cdn.jsdelivr.net/npm/socket.io@4.6.1/client-dist/socket.io.min.js"></script>
 <script>
   const socket = io();
-  let blockedSet = new Set();
+  let blockedSet  = new Set();
   let chainLength = 0;
+  let fileCount   = 0;
+
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
 
   // ── Helpers ──────────────────────────────────────────────────────
   function fmt(ts) {
@@ -240,12 +274,13 @@
 
   // ── Event feed ───────────────────────────────────────────────────
   const eventIcons = {
-    connect: ['event-connect','bi-box-arrow-in-right','Connected'],
-    disconnect: ['event-disconnect','bi-box-arrow-right','Disconnected'],
-    message: ['event-message','bi-chat-dots','Message'],
-    block: ['event-block','bi-slash-circle','Blocked'],
-    allow: ['event-allow','bi-check-circle','Allowed'],
-    mine: ['event-mine','bi-boxes','Block mined'],
+    connect:    ['event-connect',    'bi-box-arrow-in-right', 'Connected'],
+    disconnect: ['event-disconnect', 'bi-box-arrow-right',    'Disconnected'],
+    message:    ['event-message',    'bi-chat-dots',          'Message'],
+    block:      ['event-block',      'bi-slash-circle',       'Blocked'],
+    allow:      ['event-allow',      'bi-check-circle',       'Allowed'],
+    mine:       ['event-mine',       'bi-boxes',              'Block mined'],
+    file:       ['event-file',       'bi-file-text',          'File Transfer'],
   };
 
   function addEvent(type, text, time) {
@@ -290,12 +325,34 @@
 
   function renderChain(chain) {
     chainLength = chain.length;
+    fileCount   = 0;
     const container = document.getElementById('chainViewer');
     if (!chain.length) { container.innerHTML = '<p class="text-secondary text-center">Empty chain</p>'; return; }
 
     container.innerHTML = [...chain].reverse().map(b => {
-      const txSummary = b.transactions.map(t => t.type).join(', ');
+      const txSummary  = b.transactions.map(t => t.type).join(', ');
       const colourClass = b.index === 0 ? 'text-warning' : 'text-info';
+
+      // Strip content field from file_transfer txns before JSON display
+      const stripped = {
+        ...b,
+        transactions: b.transactions.map(t => {
+          if (t.type !== 'file_transfer') return t;
+          fileCount++;
+          const {content, ...rest} = t;
+          return {...rest, content: '[see file content below]'};
+        }),
+      };
+
+      // One <details> per file_transfer for readable content viewing
+      const fileDetails = b.transactions
+        .filter(t => t.type === 'file_transfer')
+        .map(t => `
+          <details class="file-content-details">
+            <summary>📄 ${escHtml(t.filename)} &nbsp;·&nbsp; ${(t.size/1024).toFixed(1)} KB &nbsp;·&nbsp; SHA-256: ${escHtml(t.content_hash ? t.content_hash.slice(0,20)+'…' : '')}</summary>
+            <pre>${escHtml(t.content)}</pre>
+          </details>`).join('');
+
       return `<div class="chain-block">
         <div class="chain-block-header" onclick="toggleBlock(this)">
           <span class="badge bg-secondary">#${b.index}</span>
@@ -304,10 +361,13 @@
           <i class="bi bi-chevron-down ms-2" style="font-size:.7rem;color:#64748b"></i>
         </div>
         <div class="block-body">
-          <pre>${JSON.stringify(b, null, 2)}</pre>
+          <pre>${escHtml(JSON.stringify(stripped, null, 2))}</pre>
+          ${fileDetails}
         </div>
       </div>`;
     }).join('');
+
+    document.getElementById('statFiles').textContent = fileCount;
   }
 
   function toggleBlock(header) {
@@ -389,6 +449,22 @@
 
   socket.on('new_message', msg => {
     addEvent('message', `${msg.sender} → ${msg.receiver}: "${msg.payload}"`, fmt(msg.timestamp));
+  });
+
+  socket.on('new_file', data => {
+    fileCount++;
+    document.getElementById('statFiles').textContent = fileCount;
+    const sizeKB   = (data.size / 1024).toFixed(1);
+    const hashShort = data.content_hash ? data.content_hash.slice(0, 14) + '…' : '';
+    addEvent(
+      'file',
+      `${escHtml(data.sender)} → ${escHtml(data.receiver)}: `
+      + `<strong>${escHtml(data.filename)}</strong> `
+      + `(${sizeKB} KB) `
+      + `<span class="block-tag">#${data.block_index}</span> `
+      + `<span style="font-family:monospace;font-size:.65rem;color:#64748b">${hashShort}</span>`,
+      fmt(data.timestamp)
+    );
   });
 
   // ── Init ─────────────────────────────────────────────────────────
