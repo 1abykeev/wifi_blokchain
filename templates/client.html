@@ -272,6 +272,57 @@
     }
     #sendBtn:active { background: #1d4ed8; }
     #sendBtn:disabled { background: var(--border); cursor: default; }
+
+    #attachBtn {
+      width: 42px; height: 42px;
+      border-radius: 50%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 1.1rem;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    #attachBtn:active { background: var(--border); }
+    #attachBtn:disabled { opacity: 0.4; cursor: default; }
+    #attachBtn.has-file { border-color: var(--accent-lt); color: var(--accent-lt); }
+
+    #fileChipBar {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 6px 12px;
+      display: none;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    .file-chip {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 5px 10px;
+      font-size: .8rem;
+      flex: 1;
+      overflow: hidden;
+    }
+    .chip-name {
+      font-family: monospace;
+      color: var(--text);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .chip-size { color: var(--muted); font-size: .72rem; white-space: nowrap; }
+    #removeFileBtn {
+      background: none; border: none;
+      color: var(--muted); font-size: .85rem;
+      cursor: pointer; padding: 0; line-height: 1; flex-shrink: 0;
+    }
+    #removeFileBtn:hover { color: var(--danger); }
   </style>
 </head>
 <body>
@@ -319,8 +370,22 @@
     <div class="sys-msg">You joined the network</div>
   </div>
 
+  <!-- Hidden file input -->
+  <input type="file" id="fileInput" accept=".txt,text/plain" style="display:none">
+
+  <!-- File chip (visible when a file is attached) -->
+  <div id="fileChipBar">
+    <div class="file-chip">
+      <span>📎</span>
+      <span class="chip-name" id="chipName"></span>
+      <span class="chip-size" id="chipSize"></span>
+      <button id="removeFileBtn" onclick="removeFile()" title="Remove attachment">✕</button>
+    </div>
+  </div>
+
   <!-- Input -->
   <div id="inputBar">
+    <button id="attachBtn" onclick="triggerFileInput()" title="Attach .txt file">📎</button>
     <textarea id="msgInput" rows="1" placeholder="Message…"
               oninput="autoResize(this)"
               onkeydown="handleKey(event)"></textarea>
@@ -335,6 +400,8 @@
   let myId = '';
   let isBlocked = false;
   let manualMode = false;
+  let attachedFile = null;
+  let attachedContent = null;
 
   // ── Join ──────────────────────────────────────────────────
   function joinNetwork() {
@@ -414,9 +481,15 @@
   function sendMessage() {
     if (isBlocked) return;
     const receiver = getReceiver();
-    const payload  = document.getElementById('msgInput').value.trim();
     if (!receiver) { flashInput('receiverSelect'); return; }
-    if (!payload)  { flashInput('msgInput');       return; }
+
+    if (attachedFile) {
+      sendFile(receiver);
+      return;
+    }
+
+    const payload = document.getElementById('msgInput').value.trim();
+    if (!payload) { flashInput('msgInput'); return; }
 
     fetch('/api/message/send', {
       method: 'POST',
@@ -434,6 +507,81 @@
       document.getElementById('msgInput').style.height = '';
     });
   }
+
+  function sendFile(receiver) {
+    const filename = attachedFile.name;
+    const content  = attachedContent;
+
+    fetch('/api/file/send', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({sender: myId, receiver, filename, content})
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.error) {
+        appendSysMsg('❌ ' + data.error);
+        return;
+      }
+      removeFile();
+      // Sent bubble rendered via new_file socket event (Step 3).
+      // Show a minimal confirmation for now.
+      appendSysMsg('📎 Sent ' + filename + ' — block #' + data.block_index);
+    })
+    .catch(() => appendSysMsg('❌ Failed to send file'));
+  }
+
+  // ── File attach ───────────────────────────────────────────
+  function triggerFileInput() {
+    if (isBlocked) return;
+    document.getElementById('fileInput').click();
+  }
+
+  function removeFile() {
+    attachedFile = null;
+    attachedContent = null;
+    document.getElementById('fileChipBar').style.display = 'none';
+    document.getElementById('chipName').textContent = '';
+    document.getElementById('chipSize').textContent = '';
+    document.getElementById('attachBtn').classList.remove('has-file');
+    const msgInput = document.getElementById('msgInput');
+    msgInput.disabled = false;
+    msgInput.placeholder = 'Message…';
+  }
+
+  document.getElementById('fileInput').addEventListener('change', function () {
+    const file = this.files[0];
+    if (!file) return;
+
+    if (!file.name.toLowerCase().endsWith('.txt')) {
+      appendSysMsg('❌ Only .txt files are supported');
+      this.value = '';
+      return;
+    }
+    if (file.size > 500 * 1024) {
+      appendSysMsg('❌ File exceeds the 500 KB limit');
+      this.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      attachedContent = e.target.result;
+      attachedFile = file;
+
+      document.getElementById('chipName').textContent = file.name;
+      document.getElementById('chipSize').textContent =
+        '(' + (file.size / 1024).toFixed(1) + ' KB)';
+      document.getElementById('fileChipBar').style.display = 'flex';
+      document.getElementById('attachBtn').classList.add('has-file');
+
+      const msgInput = document.getElementById('msgInput');
+      msgInput.disabled = true;
+      msgInput.placeholder = 'Remove file to type a message';
+    };
+    reader.readAsText(file, 'utf-8');
+    this.value = ''; // reset so same file can be re-attached
+  });
 
   function handleKey(e) {
     // Send on Enter (not Shift+Enter) on desktop
@@ -486,7 +634,9 @@
   function applyBlockedState(blocked) {
     isBlocked = blocked;
     document.getElementById('blockedBanner').style.display = blocked ? 'block' : 'none';
-    document.getElementById('sendBtn').disabled = blocked;
+    document.getElementById('sendBtn').disabled   = blocked;
+    document.getElementById('attachBtn').disabled = blocked;
+    if (blocked) removeFile();
     const badge = document.getElementById('statusBadge');
     badge.textContent = blocked ? 'Blocked' : 'Online';
     badge.className   = blocked ? 'badge blocked' : 'badge';
