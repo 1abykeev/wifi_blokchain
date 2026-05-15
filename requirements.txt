@@ -1,6 +1,7 @@
 flask>=2.3.0
 flask-socketio>=5.3.0
 python-dotenv>=1.0.0
+simple-websocket>=0.9.0
 
 # Scapy is only needed for REAL mode (SIMULATION_MODE=False).
 # It requires root privileges and a monitor-mode WiFi adapter.
