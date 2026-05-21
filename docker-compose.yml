@@ -1,0 +1,17 @@
+services:
+  app:
+    build: .
+    container_name: blockchain-wifi-app
+    ports:
+      - "5000:5000"
+    volumes:
+      - blockchain-wifi-data:/app/data
+    environment:
+      - SIMULATION_MODE=True
+      - FLASK_HOST=0.0.0.0
+      - FLASK_PORT=5000
+      - FLASK_DEBUG=False
+      - AUTO_MINE=True
+
+volumes:
+  blockchain-wifi-data:
